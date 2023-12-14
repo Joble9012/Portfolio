@@ -10,7 +10,7 @@ FROM
 ;
 
 
--- -- Looking at min, max, and life Increase -- --
+-- -- Looking at min, max, and life increase -- --
 
 SELECT 
 	Country, 
@@ -76,11 +76,11 @@ SELECT
 	SUM(CASE
 		WHEN GDP_per_capita >= 2000 THEN 1
         ELSE 0
-	END) AS Hight_GDP_COUNT,
+	END) AS High_GDP_COUNT,
     AVG(CASE
 		WHEN GDP_per_capita >= 2000 THEN Life_expectancy
         ELSE NULL
-	END) AS Hight_GDP_Life_Expectancy,
+	END) AS High_GDP_Life_Expectancy,
     SUM(CASE
 		WHEN GDP_per_capita <= 2000 THEN 1
         ELSE 0
