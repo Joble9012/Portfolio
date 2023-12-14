@@ -54,7 +54,7 @@ WHERE
 		Row_ID
 FROM (
 SELECT
-    CONCAT(Country,Year), 
+    	CONCAT(Country,Year), 
     ROW_NUMBER() OVER( PARTITION BY CONCAT(Country,Year) ORDER BY CONCAT(Country,Year)) as Row_Num
 FROM 
 	world_life_expectancy
