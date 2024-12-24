@@ -1,2 +1,3 @@
-SELECT *
-FROM pokemon_types
+
+
+DROP TABLE DamageTakenMultipliers
