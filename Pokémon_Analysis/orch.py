@@ -1,6 +1,9 @@
 import requests
 import pandas as pd
 import psycopg2
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from datetime import datetime
 
 base_url = "https://pokeapi.co/api/v2/"
 
@@ -9,14 +12,12 @@ def get_all_pokemon_names():
     url = f"{base_url}pokemon"
     all_pokemon = []
     
-    while url:  # Continue until there are no more pages
+    while url:
         response = requests.get(url)
         
         if response.status_code == 200:
             data = response.json()
-            # Add the names of Pokémon from the current page
             all_pokemon.extend(p['name'] for p in data['results'])
-            # Update the URL to the next page, or None if there are no more pages
             url = data['next']
         else:
             print(f"Failed to retrieve data {response.status_code}")
@@ -30,8 +31,7 @@ def get_pokemon_info(name):
     response = requests.get(url)
 
     if response.status_code == 200:
-        pokemon_data = response.json()
-        return pokemon_data
+        return response.json()
     else:
         print(f"Failed to retrieve data {response.status_code}")
         return None
@@ -57,63 +57,58 @@ def get_generation(pokemon_id):
     else:
         return None
 
-# Main logic to collect Pokémon data
-all_pokemon_names = get_all_pokemon_names()
-pokemon_data_list = []
+def process_pokemon_data():
+    all_pokemon_names = get_all_pokemon_names()
+    pokemon_data_list = []
 
-for pokemon_name in all_pokemon_names[144:145]:  # Limit for testing
-    pokemon_info = get_pokemon_info(pokemon_name)
-    if pokemon_info:
-        pokemon_id = pokemon_info['id']
-        pokemon_data = {
-            "ID": pokemon_id,
-            "Name": pokemon_info['name'].capitalize(),
-            "Type_1": pokemon_info['types'][0]['type']['name'].capitalize(),
-            "Type_2": pokemon_info['types'][1]['type']['name'].capitalize() if len(pokemon_info['types']) > 1 else None,
-            "HP": pokemon_info['stats'][0]['base_stat'],
-            "Attack": pokemon_info['stats'][1]['base_stat'],
-            "Defense": pokemon_info['stats'][2]['base_stat'],
-            "Special_Attack": pokemon_info['stats'][3]['base_stat'],
-            "Special_Defense": pokemon_info['stats'][4]['base_stat'],
-            "Speed": pokemon_info['stats'][5]['base_stat'],
-            "Weight(lb)": pokemon_info['weight'],
-            "Height(in)": pokemon_info['height'],
-            "Generation": get_generation(pokemon_id)  # Add generation
-        }
-        pokemon_data_list.append(pokemon_data)
+    for pokemon_name in all_pokemon_names[:1]:  # Limit for testing
+        pokemon_info = get_pokemon_info(pokemon_name)
+        if pokemon_info:
+            pokemon_id = pokemon_info['id']
+            pokemon_data = {
+                "ID": pokemon_id,
+                "Name": pokemon_info['name'].capitalize(),
+                "Type_1": pokemon_info['types'][0]['type']['name'].capitalize(),
+                "Type_2": pokemon_info['types'][1]['type']['name'].capitalize() if len(pokemon_info['types']) > 1 else None,
+                "HP": pokemon_info['stats'][0]['base_stat'],
+                "Attack": pokemon_info['stats'][1]['base_stat'],
+                "Defense": pokemon_info['stats'][2]['base_stat'],
+                "Special_Attack": pokemon_info['stats'][3]['base_stat'],
+                "Special_Defense": pokemon_info['stats'][4]['base_stat'],
+                "Speed": pokemon_info['stats'][5]['base_stat'],
+                "Weight(lb)": pokemon_info['weight'],
+                "Height(in)": pokemon_info['height'],
+                "Generation": get_generation(pokemon_id)  # Add generation
+            }
+            pokemon_data_list.append(pokemon_data)
 
-# Convert the data to a pandas DataFrame
-pokemon_df = pd.DataFrame(pokemon_data_list)
+    # Convert the data to a pandas DataFrame
+    pokemon_df = pd.DataFrame(pokemon_data_list)
 
-# Convert Weight and Height to lb and inches
-pokemon_df['Weight(lb)'] = ((pokemon_df['Weight(lb)'] * 0.1) * 2.2).round().astype(int)
-pokemon_df['Height(in)'] = ((pokemon_df['Height(in)'] * 0.1) * 39.3701).round().astype(int)
+    # Convert Weight and Height to lb and inches
+    pokemon_df['Weight(lb)'] = ((pokemon_df['Weight(lb)'] * 0.1) * 2.2).round().astype(int)
+    pokemon_df['Height(in)'] = ((pokemon_df['Height(in)'] * 0.1) * 39.3701).round().astype(int)
 
-# Reorder columns to match the database table's structure
-pokemon_df = pokemon_df[
-    ["ID", "Name", "Type_1", "Type_2", "HP", "Attack", "Defense",
-     "Special_Attack", "Special_Defense", "Speed", "Weight(lb)", "Height(in)", "Generation"]
-]
+    return pokemon_df
 
+def insert_pokemon_data_into_db(pokemon_df):
+    # Database connection parameters
+    db_config = {
+        "dbname": "postgres",
+        "user": "postgres",
+        "password": "password",
+        "host": "localhost",
+        "port": 5432
+    }
 
-# Database connection parameters
-db_config = {
-    "dbname": "postgres",
-    "user": "postgres",
-    "password": "password",
-    "host": "localhost",
-    "port": 5432
-}
-
-# Connect to the PostgreSQL database
-try:
+    # Connect to the PostgreSQL database
     conn = psycopg2.connect(**db_config)
     cursor = conn.cursor()
     print("Connected to the database")
 
     # Create the Pokémon table if not exists
     create_table_query = """
-    CREATE TABLE IF NOT EXISTS pokemon (
+    CREATE TABLE IF NOT EXISTS pokemon2 (
         id SERIAL PRIMARY KEY,
         pokemon_id INT UNIQUE,
         name VARCHAR(50),
@@ -133,21 +128,21 @@ try:
     cursor.execute(create_table_query)
     conn.commit()
 
-    # Function to check if Pokémon exists
+# Function to check if Pokémon exists
     def pokemon_exists(pokemon_id):
         cursor.execute("SELECT 1 FROM pokemon WHERE pokemon_id = %s", (pokemon_id,))
         return cursor.fetchone() is not None
 
     # Prepare the data for insertion
     insert_query = """
-    INSERT INTO pokemon (
+    INSERT INTO pokemon2 (
         pokemon_id, name, type_1, type_2, hp, attack, defense,
         special_attack, special_defense, speed, weight_lb, height_in, generation
     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
     """
 
     # Insert only new Pokémon
-    for pokemon_data in pokemon_data_list:
+    for pokemon_data in pokemon_df.to_dict(orient='records'):
         pokemon_id = pokemon_data['ID']
         if not pokemon_exists(pokemon_id):
             cursor.execute(insert_query, (
@@ -161,70 +156,66 @@ try:
 
     conn.commit()
     print("Data inserted successfully!")
+    cursor.close()
+    conn.close()
 
-    # Create a new table for Pokémon types and damage multipliers
+def create_tables():
+    db_config = {
+        "dbname": "postgres",
+        "user": "postgres",
+        "password": "password",
+        "host": "localhost",
+        "port": 5432
+    }
+
+    conn = psycopg2.connect(**db_config)
+    cursor = conn.cursor()
+
+    # Create Pokémon types table
     create_types_table_query = """
-    CREATE TABLE IF NOT EXISTS pokemon_types (
+    CREATE TABLE IF NOT EXISTS pokemon_types2 (
         pokemon_id INT PRIMARY KEY,
-        normal  FLOAT,
-        fire    FLOAT,
-        water   FLOAT,
+        normal FLOAT,
+        fire FLOAT,
+        water FLOAT,
         electric FLOAT,
-        grass   FLOAT,
-        ice     FLOAT,
+        grass FLOAT,
+        ice FLOAT,
         fighting FLOAT,
-        poison  FLOAT,
-        ground  FLOAT,
-        flying  FLOAT,
+        poison FLOAT,
+        ground FLOAT,
+        flying FLOAT,
         psychic FLOAT,
-        bug     FLOAT,
-        rock    FLOAT,
-        ghost   FLOAT,
-        dragon  FLOAT,
-        dark    FLOAT,
-        steel   FLOAT
+        bug FLOAT,
+        rock FLOAT,
+        ghost FLOAT,
+        dragon FLOAT,
+        dark FLOAT,
+        steel FLOAT
     );
     """
     cursor.execute(create_types_table_query)
-    conn.commit()
 
-    # Insert only new IDs into the pokemon_types table
-    # Insert_Id_to_type = """
-    # INSERT INTO pokemon_types (pokemon_id)
-    # SELECT pokemon_id
-    # FROM pokemon
-    # WHERE NOT EXISTS (
-    #     SELECT 1
-    #     FROM pokemon_types
-    #     WHERE pokemon_types.pokemon_id = pokemon.pokemon_id
-    # );
-    # """
-
-    # try:
-    #     cursor.execute(Insert_Id_to_type)
-    #     conn.commit()
-    #     print("New IDs inserted into pokemon_types successfully.")
-    # except Exception as e:
-    #     print(f"An error occurred: {e}")
-
-
-# Create a new table for types e multipliers
-    create_DamageTakenMultipliers = """
-    CREATE TABLE IF NOT EXISTS DamageTakenMultipliers (
-        Defender VarChar(20),
-        Attacker  VarChar(20),
-        Multiplier    FLOAT
+    # Create DamageTakenMultipliers table
+    create_damage_taken_multipliers_query = """
+    CREATE TABLE IF NOT EXISTS DamageTakenMultipliers2 (
+        Defender VARCHAR(20),
+        Attacker VARCHAR(20),
+        Multiplier FLOAT
     );
     """
-    cursor.execute(create_DamageTakenMultipliers)
+    cursor.execute(create_damage_taken_multipliers_query)
+
     conn.commit()
+    cursor.close()
+    conn.close()
 
-
-    # Insert multipliers for each pokemon
-    Multiplier = """
-    INSERT INTO DamageTakenMultipliers (Defender, Attacker, Multiplier)
-VALUES 
-('Normal', 'Normal', 1.0),
+# Define the insert_multi function to insert multipliers
+def insert_multi(conn):
+    insert_Multiplier = """
+    INSERT INTO DamageTakenMultipliers2 (Defender, Attacker, Multiplier)
+    VALUES 
+    ('Normal', 'Normal', 1.0),
 ('Normal', 'Fire', 1.0),
 ('Normal', 'Water', 1.0),
 ('Normal', 'Electric', 1.0),
@@ -515,17 +506,19 @@ VALUES
 ('Steel', 'Steel', 0.5);
     """
     try:
-        cursor.execute(Multiplier)
+        cursor = conn.cursor()
+        cursor.execute(insert_Multiplier)
         conn.commit()
         print("Multipliers added successfully.")
     except Exception as e:
         print(f"An error occurred: {e}")
 
-# Insert pokemon multipliers
-    insert_Multipliers = """
-CREATE TEMP TABLE DamageTakenAggregated AS
-SELECT
-    Defender,
+# Define the insert_damage_taken_multipliers function
+def insert_damage_taken_multipliers(conn):
+    insert_DamageTaken = """
+    CREATE TEMP TABLE DamageTakenAggregated2 AS
+    SELECT
+        Defender,
     MAX(CASE WHEN Attacker = 'Normal' THEN Multiplier END) AS normal,
     MAX(CASE WHEN Attacker = 'Fire' THEN Multiplier END) AS fire,
     MAX(CASE WHEN Attacker = 'Water' THEN Multiplier END) AS water,
@@ -543,11 +536,11 @@ SELECT
     MAX(CASE WHEN Attacker = 'Dragon' THEN Multiplier END) AS dragon,
     MAX(CASE WHEN Attacker = 'Dark' THEN Multiplier END) AS dark,
     MAX(CASE WHEN Attacker = 'Steel' THEN Multiplier END) AS steel
-FROM DamageTakenMultipliers
-GROUP BY Defender;
+    FROM DamageTakenMultipliers2
+    GROUP BY Defender;
 
-WITH type_multipliers AS (
-    SELECT
+    WITH type_multipliers AS (
+        SELECT
         p.pokemon_id,
         COALESCE(da1.normal, 1) * COALESCE(da2.normal, 1) AS normal,
         COALESCE(da1.fire, 1) * COALESCE(da2.fire, 1) AS fire,
@@ -566,55 +559,56 @@ WITH type_multipliers AS (
         COALESCE(da1.dragon, 1) * COALESCE(da2.dragon, 1) AS dragon,
         COALESCE(da1.dark, 1) * COALESCE(da2.dark, 1) AS dark,
         COALESCE(da1.steel, 1) * COALESCE(da2.steel, 1) AS steel
-    FROM pokemon p
-    LEFT JOIN (
-        SELECT DISTINCT Defender, normal, fire, water, electric, grass, ice, fighting, poison, ground,
-                        flying, psychic, bug, rock, ghost, dragon, dark, steel
-        FROM DamageTakenAggregated
-    ) da1 ON LOWER(p.type_1) = LOWER(da1.Defender)
-    LEFT JOIN (
-        SELECT DISTINCT Defender, normal, fire, water, electric, grass, ice, fighting, poison, ground,
-                        flying, psychic, bug, rock, ghost, dragon, dark, steel
-        FROM DamageTakenAggregated
-    ) da2 ON LOWER(p.type_2) = LOWER(da2.Defender)
-)
-INSERT INTO pokemon_types (
-    pokemon_id,
-    normal,
-    fire,
-    water,
-    electric,
-    grass,
-    ice,
-    fighting,
-    poison,
-    ground,
-    flying,
-    psychic,
-    bug,
-    rock,
-    ghost,
-    dragon,
-    dark,
-    steel
-)
-SELECT *
-FROM type_multipliers
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM pokemon_types
-    WHERE pokemon_types.pokemon_id = type_multipliers.pokemon_id);
+        FROM DamageTakenAggregated2 da1
+        -- Continue with the rest of the logic as in your original query
+    )
     """
-
     try:
-        cursor.execute(insert_Multipliers)
+        cursor = conn.cursor()
+        cursor.execute(insert_DamageTaken)
         conn.commit()
-        print("good ")
+        print("Damage taken multipliers aggregated successfully.")
     except Exception as e:
         print(f"An error occurred: {e}")
 
-finally:
-    if cursor:
-        cursor.close()
-    if conn:
-        conn.close()
+default_args = {
+    'owner': 'airflow',
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
+}
+
+# Define the DAG
+with DAG(
+    dag_id='pokemon_data_pipeline',
+    default_args=default_args,
+    start_date=datetime(2024, 12, 25),
+    schedule_interval='@daily',  # Adjust as needed
+    catchup=False
+) as dag:
+
+    # Task 1: Create Tables
+    create_tables_task = PythonOperator(
+        task_id='create_tables',
+        python_callable=create_tables
+    )
+
+    # Task 2: Fetch Pokémon Data
+    fetch_pokemon_data_task = PythonOperator(
+        task_id='fetch_pokemon_data',
+        python_callable=process_pokemon_data
+    )
+
+    # Task 3: Insert Pokémon Data into DB
+    insert_pokemon_data_task = PythonOperator(
+        task_id='insert_pokemon_data',
+        python_callable=lambda: insert_pokemon_data_into_db(process_pokemon_data())
+    )
+
+    # Task 4: Insert Multipliers
+    insert_multipliers_task = PythonOperator(
+        task_id='insert_multipliers',
+        python_callable=lambda: insert_multi()
+    )
+
+    # Define Task Dependencies
+    create_tables_task >> fetch_pokemon_data_task >> insert_pokemon_data_task >> insert_multipliers_task

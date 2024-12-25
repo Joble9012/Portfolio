@@ -1,7 +1,5 @@
-SELECT * 
-FROM pokemon;
+SELECT * PokemonData
 
-SELECT * FROM pokemon_types;
+SELECT * FROM PokemonTypeDamageTaken
 
-
-SELECT * FROM DamageTakenMultipliers;
+SELECT * DamageTakenMultipliers
