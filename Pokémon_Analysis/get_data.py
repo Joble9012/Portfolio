@@ -549,99 +549,61 @@ VALUES
 
 # Insert pokemon multipliers
     insert_Multipliers = """
+CREATE TEMP TABLE DamageTakenAggregated AS
+SELECT
+    Defender,
+    MAX(CASE WHEN Attacker = 'Normal' THEN Multiplier END) AS normal,
+    MAX(CASE WHEN Attacker = 'Fire' THEN Multiplier END) AS fire,
+    MAX(CASE WHEN Attacker = 'Water' THEN Multiplier END) AS water,
+    MAX(CASE WHEN Attacker = 'Electric' THEN Multiplier END) AS electric,
+    MAX(CASE WHEN Attacker = 'Grass' THEN Multiplier END) AS grass,
+    MAX(CASE WHEN Attacker = 'Ice' THEN Multiplier END) AS ice,
+    MAX(CASE WHEN Attacker = 'Fighting' THEN Multiplier END) AS fighting,
+    MAX(CASE WHEN Attacker = 'Poison' THEN Multiplier END) AS poison,
+    MAX(CASE WHEN Attacker = 'Ground' THEN Multiplier END) AS ground,
+    MAX(CASE WHEN Attacker = 'Flying' THEN Multiplier END) AS flying,
+    MAX(CASE WHEN Attacker = 'Psychic' THEN Multiplier END) AS psychic,
+    MAX(CASE WHEN Attacker = 'Bug' THEN Multiplier END) AS bug,
+    MAX(CASE WHEN Attacker = 'Rock' THEN Multiplier END) AS rock,
+    MAX(CASE WHEN Attacker = 'Ghost' THEN Multiplier END) AS ghost,
+    MAX(CASE WHEN Attacker = 'Dragon' THEN Multiplier END) AS dragon,
+    MAX(CASE WHEN Attacker = 'Dark' THEN Multiplier END) AS dark,
+    MAX(CASE WHEN Attacker = 'Steel' THEN Multiplier END) AS steel
+FROM DamageTakenMultipliers
+GROUP BY Defender;
+
 WITH type_multipliers AS (
-    -- Get damage multipliers for both type_1 and type_2
     SELECT
         p.pokemon_id,
-        -- Join the DamageTakenMultipliers table for each damage type
-        COALESCE(dm1.Multiplier, 1) AS normal,
-        COALESCE(dm2.Multiplier, 1) AS fire,
-        COALESCE(dm3.Multiplier, 1) AS water,
-        COALESCE(dm4.Multiplier, 1) AS electric,
-        COALESCE(dm5.Multiplier, 1) AS grass,
-        COALESCE(dm6.Multiplier, 1) AS ice,
-        COALESCE(dm7.Multiplier, 1) AS fighting,
-        COALESCE(dm8.Multiplier, 1) AS poison,
-        COALESCE(dm9.Multiplier, 1) AS ground,
-        COALESCE(dm10.Multiplier, 1) AS flying,
-        COALESCE(dm11.Multiplier, 1) AS psychic,
-        COALESCE(dm12.Multiplier, 1) AS bug,
-        COALESCE(dm13.Multiplier, 1) AS rock,
-        COALESCE(dm14.Multiplier, 1) AS ghost,
-        COALESCE(dm15.Multiplier, 1) AS dragon,
-        COALESCE(dm16.Multiplier, 1) AS dark,
-        COALESCE(dm17.Multiplier, 1) AS steel
+        COALESCE(da1.normal, 1) * COALESCE(da2.normal, 1) AS normal,
+        COALESCE(da1.fire, 1) * COALESCE(da2.fire, 1) AS fire,
+        COALESCE(da1.water, 1) * COALESCE(da2.water, 1) AS water,
+        COALESCE(da1.electric, 1) * COALESCE(da2.electric, 1) AS electric,
+        COALESCE(da1.grass, 1) * COALESCE(da2.grass, 1) AS grass,
+        COALESCE(da1.ice, 1) * COALESCE(da2.ice, 1) AS ice,
+        COALESCE(da1.fighting, 1) * COALESCE(da2.fighting, 1) AS fighting,
+        COALESCE(da1.poison, 1) * COALESCE(da2.poison, 1) AS poison,
+        COALESCE(da1.ground, 1) * COALESCE(da2.ground, 1) AS ground,
+        COALESCE(da1.flying, 1) * COALESCE(da2.flying, 1) AS flying,
+        COALESCE(da1.psychic, 1) * COALESCE(da2.psychic, 1) AS psychic,
+        COALESCE(da1.bug, 1) * COALESCE(da2.bug, 1) AS bug,
+        COALESCE(da1.rock, 1) * COALESCE(da2.rock, 1) AS rock,
+        COALESCE(da1.ghost, 1) * COALESCE(da2.ghost, 1) AS ghost,
+        COALESCE(da1.dragon, 1) * COALESCE(da2.dragon, 1) AS dragon,
+        COALESCE(da1.dark, 1) * COALESCE(da2.dark, 1) AS dark,
+        COALESCE(da1.steel, 1) * COALESCE(da2.steel, 1) AS steel
     FROM pokemon p
-    LEFT JOIN DamageTakenMultipliers dm1 
-        ON p.type_1 = dm1.Defender AND dm1.Attacker = 'Normal'
-    LEFT JOIN DamageTakenMultipliers dm2 
-        ON p.type_1 = dm2.Defender AND dm2.Attacker = 'Fire'
-    LEFT JOIN DamageTakenMultipliers dm3 
-        ON p.type_1 = dm3.Defender AND dm3.Attacker = 'Water'
-    LEFT JOIN DamageTakenMultipliers dm4 
-        ON p.type_1 = dm4.Defender AND dm4.Attacker = 'Electric'
-    LEFT JOIN DamageTakenMultipliers dm5 
-        ON p.type_1 = dm5.Defender AND dm5.Attacker = 'Grass'
-    LEFT JOIN DamageTakenMultipliers dm6 
-        ON p.type_1 = dm6.Defender AND dm6.Attacker = 'Ice'
-    LEFT JOIN DamageTakenMultipliers dm7 
-        ON p.type_1 = dm7.Defender AND dm7.Attacker = 'Fighting'
-    LEFT JOIN DamageTakenMultipliers dm8 
-        ON p.type_1 = dm8.Defender AND dm8.Attacker = 'Poison'
-    LEFT JOIN DamageTakenMultipliers dm9 
-        ON p.type_1 = dm9.Defender AND dm9.Attacker = 'Ground'
-    LEFT JOIN DamageTakenMultipliers dm10 
-        ON p.type_1 = dm10.Defender AND dm10.Attacker = 'Flying'
-    LEFT JOIN DamageTakenMultipliers dm11 
-        ON p.type_1 = dm11.Defender AND dm11.Attacker = 'Psychic'
-    LEFT JOIN DamageTakenMultipliers dm12 
-        ON p.type_1 = dm12.Defender AND dm12.Attacker = 'Bug'
-    LEFT JOIN DamageTakenMultipliers dm13 
-        ON p.type_1 = dm13.Defender AND dm13.Attacker = 'Rock'
-    LEFT JOIN DamageTakenMultipliers dm14 
-        ON p.type_1 = dm14.Defender AND dm14.Attacker = 'Ghost'
-    LEFT JOIN DamageTakenMultipliers dm15 
-        ON p.type_1 = dm15.Defender AND dm15.Attacker = 'Dragon'
-    LEFT JOIN DamageTakenMultipliers dm16 
-        ON p.type_1 = dm16.Defender AND dm16.Attacker = 'Dark'
-    LEFT JOIN DamageTakenMultipliers dm17 
-        ON p.type_1 = dm17.Defender AND dm17.Attacker = 'Steel'
-    LEFT JOIN DamageTakenMultipliers dm18
-        ON p.type_2 = dm18.Defender AND dm18.Attacker = 'Normal'
-    LEFT JOIN DamageTakenMultipliers dm19 
-        ON p.type_2 = dm19.Defender AND dm19.Attacker = 'Fire'
-    LEFT JOIN DamageTakenMultipliers dm20 
-        ON p.type_2 = dm20.Defender AND dm20.Attacker = 'Water'
-    LEFT JOIN DamageTakenMultipliers dm21 
-        ON p.type_2 = dm21.Defender AND dm21.Attacker = 'Electric'
-    LEFT JOIN DamageTakenMultipliers dm22 
-        ON p.type_2 = dm22.Defender AND dm22.Attacker = 'Grass'
-    LEFT JOIN DamageTakenMultipliers dm23 
-        ON p.type_2 = dm23.Defender AND dm23.Attacker = 'Ice'
-    LEFT JOIN DamageTakenMultipliers dm24 
-        ON p.type_2 = dm24.Defender AND dm24.Attacker = 'Fighting'
-    LEFT JOIN DamageTakenMultipliers dm25 
-        ON p.type_2 = dm25.Defender AND dm25.Attacker = 'Poison'
-    LEFT JOIN DamageTakenMultipliers dm26 
-        ON p.type_2 = dm26.Defender AND dm26.Attacker = 'Ground'
-    LEFT JOIN DamageTakenMultipliers dm27 
-        ON p.type_2 = dm27.Defender AND dm27.Attacker = 'Flying'
-    LEFT JOIN DamageTakenMultipliers dm28 
-        ON p.type_2 = dm28.Defender AND dm28.Attacker = 'Psychic'
-    LEFT JOIN DamageTakenMultipliers dm29 
-        ON p.type_2 = dm29.Defender AND dm29.Attacker = 'Bug'
-    LEFT JOIN DamageTakenMultipliers dm30 
-        ON p.type_2 = dm30.Defender AND dm30.Attacker = 'Rock'
-    LEFT JOIN DamageTakenMultipliers dm31 
-        ON p.type_2 = dm31.Defender AND dm31.Attacker = 'Ghost'
-    LEFT JOIN DamageTakenMultipliers dm32 
-        ON p.type_2 = dm32.Defender AND dm32.Attacker = 'Dragon'
-    LEFT JOIN DamageTakenMultipliers dm33 
-        ON p.type_2 = dm33.Defender AND dm33.Attacker = 'Dark'
-    LEFT JOIN DamageTakenMultipliers dm34 
-        ON p.type_2 = dm34.Defender AND dm34.Attacker = 'Steel'
+    LEFT JOIN (
+        SELECT DISTINCT Defender, normal, fire, water, electric, grass, ice, fighting, poison, ground,
+                        flying, psychic, bug, rock, ghost, dragon, dark, steel
+        FROM DamageTakenAggregated
+    ) da1 ON LOWER(p.type_1) = LOWER(da1.Defender)
+    LEFT JOIN (
+        SELECT DISTINCT Defender, normal, fire, water, electric, grass, ice, fighting, poison, ground,
+                        flying, psychic, bug, rock, ghost, dragon, dark, steel
+        FROM DamageTakenAggregated
+    ) da2 ON LOWER(p.type_2) = LOWER(da2.Defender)
 )
--- Insert the results into the pokemon_types table
 INSERT INTO pokemon_types (
     pokemon_id,
     normal,
@@ -662,30 +624,12 @@ INSERT INTO pokemon_types (
     dark,
     steel
 )
-SELECT
-    pokemon_id,
-    normal,
-    fire,
-    water,
-    electric,
-    grass,
-    ice,
-    fighting,
-    poison,
-    ground,
-    flying,
-    psychic,
-    bug,
-    rock,
-    ghost,
-    dragon,
-    dark,
-    steel
+SELECT *
 FROM type_multipliers
 WHERE NOT EXISTS (
-        SELECT 1
-        FROM pokemon_types
-        WHERE pokemon_types.pokemon_id = type_multipliers.pokemon_id);
+    SELECT 1
+    FROM pokemon_types
+    WHERE pokemon_types.pokemon_id = type_multipliers.pokemon_id);
     """
 
     try:
