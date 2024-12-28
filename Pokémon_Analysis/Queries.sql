@@ -3,14 +3,44 @@
 ----------------------------------------------------------
 
 -- Find the number of Pokémon for each primary and secondary type
+-- SELECT DISTINCT type_1, COUNT(type_1) 
+-- FROM PokemonData
+-- GROUP BY type_1
+-- ORDER BY COUNT(type_1) DESC;
+
+-- SELECT DISTINCT type_2, COUNT(type_2) 
+-- FROM PokemonData
+-- GROUP BY type_2
+-- ORDER BY COUNT(type_2) DESC;
 
 -- Identify the top 5 Pokémon with the highest total base stats
+-- SELECT name, (hp + attack + defense + special_attack + special_defense + speed) AS total_base_stat
+-- FROM PokemonData
+-- ORDER BY total_stats DESC
+-- LIMIT 5;
 
 -- Calculate the average stats for Pokémon in each generation
+-- SELECT generation, ROUND(AVG(hp),1) AS hp, ROUND(AVG(attack),1) AS attack, ROUND(AVG(defense),1) AS defense, ROUND(AVG(special_attack),1) AS special_attack, ROUND(AVG(special_defense),1) AS special_defense, ROUND(AVG(speed),1) AS speed
+-- FROM PokemonData
+-- GROUP BY generation;
 
 -- List Pokémon whose total base stats exceed the average across all Pokémon
+-- WITH TotalBaseStats AS (
+--     SELECT name, (hp + attack + defense + special_attack + special_defense + speed) AS total_base_stat
+--     FROM PokemonData
+-- )
+-- SELECT name, total_base_stat
+-- FROM TotalBaseStats
+-- WHERE total_base_stat > (SELECT AVG(total_base_stat) FROM TotalBaseStats);
 
 -- Retrieve the names and weights of the lightest and heaviest Pokémon
+-- SELECT name, weight_lb
+-- FROM PokemonData
+-- WHERE weight_lb = (SELECT MIN(weight_lb) FROM PokemonData);
+
+-- SELECT name, weight_lb
+-- FROM PokemonData
+-- WHERE weight_lb = (SELECT MAX(weight_lb) FROM PokemonData);
 
 ----------------------------------------------------------
 -- Intermediate Queries
