@@ -16,7 +16,7 @@ def get_generation(pokemon_id):
             return gen
     return None
 
-def process_pokemon_data(cursor, all_pokemon_names, get_pokemon_info):
+def process_pokemon_data(all_pokemon_names, get_pokemon_info):
     pokemon_data_list = []
     for pokemon_name in all_pokemon_names[:10]:
         pokemon_info = get_pokemon_info(pokemon_name)

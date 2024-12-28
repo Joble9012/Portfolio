@@ -1,5 +1,5 @@
 import pandas as pd
-from api_client import connect_to_db, insert_pokemon_data
+from api_client import insert_pokemon_data, get_pokemon_info, get_all_pokemon_names
 from data_processing import process_pokemon_data
 from database_manager import connect_to_db, create_tables, DamageTakenMultipliers_create_tables
 
@@ -22,8 +22,7 @@ def main():
     try:
         create_tables(cursor)
         DamageTakenMultipliers_create_tables(cursor)
-        all_pokemon_names = insert_pokemon_data()
-        pokemon_data_list = process_pokemon_data(cursor,all_pokemon_names)
+        pokemon_data_list = process_pokemon_data(get_all_pokemon_names(), get_pokemon_info)
         insert_pokemon_data(cursor, pokemon_data_list)
         conn.commit()
         print("Data inserted successfully!")
