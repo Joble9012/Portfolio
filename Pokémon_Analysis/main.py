@@ -23,8 +23,8 @@ def main():
         create_tables(cursor)
         DamageTakenMultipliers_create_tables(cursor)
         pokemon_data_list = process_pokemon_data(get_all_pokemon_names(), get_pokemon_info)
-        insert_pokemon_data(cursor, pokemon_data_list)
         conn.commit()
+        insert_pokemon_data(cursor, pokemon_data_list)
         print("Data inserted successfully!")
         insert_Multipliers = """
     CREATE TEMP TABLE DamageTakenAggregated AS
