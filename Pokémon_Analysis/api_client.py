@@ -1,37 +1,48 @@
-import psycopg2
-base_url = "https://pokeapi.co/api/v2/"
 import requests
 
+# Base URL for API
+BASE_URL = "https://pokeapi.co/api/v2/"
+
 def get_all_pokemon_names():
-    url = f"{base_url}pokemon"
+    """
+    Fetch all Pokémon names from the API, handling pagination.
+    Returns a list of Pokémon names.
+    """
+    url = f"{BASE_URL}pokemon"
     all_pokemon = []
-    
+
     while url:
         response = requests.get(url)
-        
+
         if response.status_code == 200:
             data = response.json()
-            all_pokemon.extend(p['name'] for p in data['results'])
-            url = data['next']
+            all_pokemon.extend(pokemon['name'] for pokemon in data['results'])
+            url = data['next']  # Update the URL for the next page
         else:
-            print(f"Failed to retrieve data {response.status_code}")
+            print(f"Failed to retrieve data: {response.status_code}")
             break
 
     return all_pokemon
 
-# Get detailed information about a single Pokémon
 def get_pokemon_info(name):
-    url = f"{base_url}pokemon/{name}"
+    """
+    Get detailed information about a specific Pokémon.
+    Returns the Pokémon data if successful, or None if failed.
+    """
+    url = f"{BASE_URL}pokemon/{name}"
     response = requests.get(url)
 
     if response.status_code == 200:
-        pokemon_data = response.json()
-        return pokemon_data
+        return response.json()
     else:
-        print(f"Failed to retrieve data {response.status_code}")
+        print(f"Failed to retrieve data: {response.status_code}")
         return None
 
 def insert_pokemon_data(cursor, pokemon_data_list):
+    """
+    Insert Pokémon data into the database.
+    Uses executemany for bulk insertion to improve performance.
+    """
     insert_query = """
     INSERT INTO PokemonData (
         pokemon_id, name, type_1, type_2, hp, attack, defense,
@@ -39,9 +50,9 @@ def insert_pokemon_data(cursor, pokemon_data_list):
     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     ON CONFLICT (pokemon_id) DO NOTHING;
     """
-    
+
     try:
-        # Prepare data in the correct format (list of tuples)
+        # Prepare data as a list of tuples for bulk insertion
         pokemon_data_tuples = [
             (
                 pokemon['ID'], pokemon['Name'], pokemon['Type_1'],
@@ -52,14 +63,14 @@ def insert_pokemon_data(cursor, pokemon_data_list):
                 pokemon['Generation']
             ) for pokemon in pokemon_data_list
         ]
-        
-        # Try inserting all records at once using executemany()
+
+        # Execute the bulk insert
         cursor.executemany(insert_query, pokemon_data_tuples)
         print("Pokemon data inserted successfully.")
-        
+
     except Exception as e:
         print(f"Error inserting data: {e}")
-        # Optionally, if you want to retry inserting each record individually:
+        # Optionally, insert records individually if bulk insertion fails
         for pokemon_data in pokemon_data_list:
             try:
                 cursor.execute(insert_query, (

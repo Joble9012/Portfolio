@@ -1,6 +1,10 @@
 import pandas as pd
 
 def get_generation(pokemon_id):
+    """
+    Determine the generation of a Pokémon based on its ID.
+    Returns the generation number or None if ID is invalid.
+    """
     generation_ranges = {
         1: range(1, 152),
         2: range(152, 252),
@@ -11,16 +15,25 @@ def get_generation(pokemon_id):
         7: range(722, 810),
         8: range(810, 899)
     }
+
     for gen, gen_range in generation_ranges.items():
         if pokemon_id in gen_range:
             return gen
     return None
 
 def process_pokemon_data(all_pokemon_names, get_pokemon_info):
+    """
+    Process Pokémon data for a list of Pokémon names.
+    Fetches detailed information for each Pokémon and organizes the data into a list of dictionaries.
+    """
     pokemon_data_list = []
+
+    # Iterate over the first 10 Pokémon names
     for pokemon_name in all_pokemon_names[:10]:
         pokemon_info = get_pokemon_info(pokemon_name)
+        
         if pokemon_info:
+            # Extract necessary data from the Pokémon information
             pokemon_data = {
                 "ID": pokemon_info['id'],
                 "Name": pokemon_info['name'].capitalize(),
@@ -32,9 +45,10 @@ def process_pokemon_data(all_pokemon_names, get_pokemon_info):
                 "Special_Attack": pokemon_info['stats'][3]['base_stat'],
                 "Special_Defense": pokemon_info['stats'][4]['base_stat'],
                 "Speed": pokemon_info['stats'][5]['base_stat'],
-                "Weight(lb)": round(pokemon_info['weight'] * 0.1 * 2.2),
-                "Height(in)": round(pokemon_info['height'] * 0.1 * 39.3701),
+                "Weight(lb)": round(pokemon_info['weight'] * 0.1 * 2.2),  # Convert weight to pounds
+                "Height(in)": round(pokemon_info['height'] * 0.1 * 39.3701),  # Convert height to inches
                 "Generation": get_generation(pokemon_info['id'])
             }
             pokemon_data_list.append(pokemon_data)
+
     return pokemon_data_list

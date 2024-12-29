@@ -1,6 +1,9 @@
 import psycopg2
 
 def connect_to_db(db_config):
+    """
+    Establishes a connection to the database and returns the connection and cursor.
+    """
     try:
         conn = psycopg2.connect(**db_config)
         cursor = conn.cursor()
@@ -11,6 +14,9 @@ def connect_to_db(db_config):
         return None, None
 
 def create_tables(cursor):
+    """
+    Creates the PokemonData and PokemonTypeDamageTaken tables in the database.
+    """
     table_queries = [
         """
         CREATE TABLE IF NOT EXISTS PokemonData (
@@ -48,21 +54,19 @@ def create_tables(cursor):
         print(f"Error creating tables: {e}")
 
 
-def DamageTakenMultipliers_create_tables(cursor):
-    try:
-        # Drop table if it exists
-        cursor.execute("DROP TABLE IF EXISTS DamageTakenMultipliers;")
-        
-        # Create table
-        cursor.execute("""
-            CREATE TABLE DamageTakenMultipliers (
-                Defender VARCHAR(20),
-                Attacker VARCHAR(20),
-                Multiplier FLOAT
-            );
-        """)
-
-        cursor.execute("""
+def create_damage_taken_multipliers_table(cursor):
+    """
+    Creates the DamageTakenMultipliers table and inserts data into it.
+    """
+    drop_table_query = "DROP TABLE IF EXISTS DamageTakenMultipliers;"
+    create_table_query = """
+        CREATE TABLE DamageTakenMultipliers (
+            Defender VARCHAR(20),
+            Attacker VARCHAR(20),
+            Multiplier FLOAT
+        );
+    """
+    insert_data_query = """
         INSERT INTO DamageTakenMultipliers (Defender, Attacker, Multiplier)
         VALUES 
         ('Normal', 'Normal', 1.0),
@@ -354,7 +358,11 @@ def DamageTakenMultipliers_create_tables(cursor):
         ('Steel', 'Dragon', 0.5),
         ('Steel', 'Dark', 0.5),
         ('Steel', 'Steel', 0.5);
-    """)
+    """
+    try:
+        cursor.execute(drop_table_query)
+        cursor.execute(create_table_query)
+        cursor.execute(insert_data_query)
         print("DamageTakenMultipliers table created and data inserted successfully.")
     except Exception as e:
-        print(f"Error creating table: {e}")
+        print(f"Error creating table or inserting data: {e}")
