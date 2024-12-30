@@ -29,7 +29,7 @@ def process_pokemon_data(all_pokemon_names, get_pokemon_info):
     pokemon_data_list = []
 
     # Iterate over the first 10 Pokémon names
-    for pokemon_name in all_pokemon_names[:386]:
+    for pokemon_name in all_pokemon_names[:649]:
         pokemon_info = get_pokemon_info(pokemon_name)
         
         if pokemon_info:

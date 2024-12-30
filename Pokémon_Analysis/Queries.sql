@@ -1,12 +1,14 @@
+-- SELECT * FROM pokemondata;
+
 ----------------------------------------------------------
--- Basic Analysis
+-- Data Exploratory
 ----------------------------------------------------------
 
 -- Find the number of Pokémon for each primary and secondary type
-SELECT DISTINCT type_1, COUNT(type_1) 
-FROM PokemonData
-GROUP BY type_1
-ORDER BY COUNT(type_1) DESC;
+-- SELECT DISTINCT type_1, COUNT(type_1) 
+-- FROM PokemonData
+-- GROUP BY type_1
+-- ORDER BY COUNT(type_1) DESC;
 
 -- SELECT DISTINCT type_2, COUNT(type_2) 
 -- FROM PokemonData
@@ -48,8 +50,6 @@ ORDER BY COUNT(type_1) DESC;
 -- WHERE speed > 100
 -- ORDER by speed DESC;
 
--- Show the average HP, Attack, and Defense for each type (both primary and secondary)
-
 -- Find Pokémon taller than 80 inches and sort them by height descending
 -- SELECT name, height_in
 -- FROM PokemonData
@@ -74,12 +74,6 @@ ORDER BY COUNT(type_1) DESC;
 -- GROUP BY type
 -- ORDER BY total_count DESC;
 
-
-
-----------------------------------------------------------
--- Advanced Analysis
-----------------------------------------------------------
-
 -- Using the DamageTakenMultipliers table, calculate the total damage multiplier for Pokémon of a specific type combination (e.g., Fire/Water)
 
 -- Identify which primary type has the lowest average damage multiplier against its weaknesses
@@ -90,16 +84,17 @@ ORDER BY COUNT(type_1) DESC;
 
 -- Categorize Pokémon into weight classes (e.g., Light: <50 lbs, Medium: 50-150 lbs, Heavy: >150 lbs) and count how many fall into each class
 
-----------------------------------------------------------
--- Complex Queries
-----------------------------------------------------------
 
 -- Identify Pokémon whose stats are above the average for their generation
 
--- Join the PokemonData and PokemonTypeDamageTaken tables to show Pokémon and their vulnerabilities
 
 -- Find Pokémon that take the least damage across all attack types (lowest average damage multiplier)
+-- SELECT 
+--     pd.name, 
+--     ROUND(CAST((normal + fire + water + electric + grass + ice + fighting + poison + ground + flying + psychic + bug + rock + ghost + dragon + dark + steel)/17 AS numeric), 2) AS Avg
+-- FROM PokemonData pd
+-- INNER JOIN pokemontypedamagetaken ptdt
+--     ON pd.pokemon_id = ptdt.pokemon_id
+-- ORDER BY 
+--     Avg DESC;
 
--- Determine if there are any Pokémon with stats consistent across multiple generations
-
--- Calculate a custom “power index” for each Pokémon using a weighted formula: Power_Index=(2×Attack+Defense+Speed)/Weight And rank Pokémon based on this index
