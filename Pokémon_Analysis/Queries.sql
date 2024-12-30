@@ -3,10 +3,10 @@
 ----------------------------------------------------------
 
 -- Find the number of Pokémon for each primary and secondary type
--- SELECT DISTINCT type_1, COUNT(type_1) 
--- FROM PokemonData
--- GROUP BY type_1
--- ORDER BY COUNT(type_1) DESC;
+SELECT DISTINCT type_1, COUNT(type_1) 
+FROM PokemonData
+GROUP BY type_1
+ORDER BY COUNT(type_1) DESC;
 
 -- SELECT DISTINCT type_2, COUNT(type_2) 
 -- FROM PokemonData
@@ -42,19 +42,39 @@
 -- FROM PokemonData
 -- WHERE weight_lb = (SELECT MAX(weight_lb) FROM PokemonData);
 
-----------------------------------------------------------
--- Intermediate Queries
-----------------------------------------------------------
-
--- Find Pokémon that have both primary and secondary types defined
-
 -- List all Pokémon with a speed greater than 100 and order them by speed descending
+-- SELECT name, speed
+-- FROM PokemonData
+-- WHERE speed > 100
+-- ORDER by speed DESC;
 
 -- Show the average HP, Attack, and Defense for each type (both primary and secondary)
 
 -- Find Pokémon taller than 80 inches and sort them by height descending
+-- SELECT name, height_in
+-- FROM PokemonData
+-- WHERE height_in > 80
+-- ORDER by height_in DESC;
 
 -- Determine the most frequent secondary type among all Pokémon
+-- WITH type_counts AS (
+--     -- Get counts from type_1
+--     SELECT type_1 AS type, COUNT(*) AS count
+--     FROM pokemondata
+--     GROUP BY type_1
+--     UNION ALL
+--     -- Get counts from type_2
+--     SELECT type_2 AS type, COUNT(*) AS count
+--     FROM pokemondata
+--     GROUP BY type_2
+-- )
+-- SELECT type, SUM(count) AS total_count
+-- FROM type_counts
+-- WHERE type_counts IS NOT NULL
+-- GROUP BY type
+-- ORDER BY total_count DESC;
+
+
 
 ----------------------------------------------------------
 -- Advanced Analysis
@@ -83,9 +103,3 @@
 -- Determine if there are any Pokémon with stats consistent across multiple generations
 
 -- Calculate a custom “power index” for each Pokémon using a weighted formula: Power_Index=(2×Attack+Defense+Speed)/Weight And rank Pokémon based on this index
-
-SELECT * FROM PokemonData;
-
-SELECT * FROM PokemonTypeDamageTaken;
-
-SELECT * FROM DamageTakenMultipliers;
