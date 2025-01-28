@@ -1,0 +1,22 @@
+import pandas as pd
+
+# Load the dataset
+df = pd.read_json('RawWatchHistory.json')
+
+# Drop unnecessary columns except for 'subtitles'
+df = df.drop(["header", "titleUrl", "products", "activityControls", "details", "description"], axis="columns")
+
+# Function to extract 'name' from 'subtitles'
+def extract_name(subtitles):
+    if isinstance(subtitles, list) and len(subtitles) > 0:  # Check if it's a non-empty list
+        return subtitles[0].get('name', None)  # Get 'name' from the first dictionary
+    return None  # Return None if subtitles is None or not a list
+
+# Apply the function to the 'subtitles' column
+df['subtitle_name'] = df['subtitles'].apply(extract_name)
+
+# Drop the original 'subtitles' column (optional)
+df = df.drop(columns=['subtitles'])
+
+# Print the DataFrame to verify
+print(df.head())
