@@ -1,10 +1,36 @@
 import pandas as pd
+import re
 
 # Load the dataset
 df = pd.read_json('RawWatchHistory.json')
 
+# What are the coloumns working with
+# print(df.info())
+'''
+ #   Column            Non-Null Count  Dtype 
+---  ------            --------------  ----- 
+ 0   header            57036 non-null  object
+ 1   title             57036 non-null  object
+ 2   titleUrl          56833 non-null  object
+ 3   subtitles         51744 non-null  object
+ 4   time              57036 non-null  object
+ 5   products          57036 non-null  object
+ 6   activityControls  57036 non-null  object
+ 7   details           1181 non-null   object
+ 8   description       1 non-null      object 
+'''
+
 # Drop unnecessary columns except for 'subtitles'
 df = df.drop(["header", "titleUrl", "products", "activityControls", "details", "description"], axis="columns")
+
+#print(newdf.info())
+'''
+#   Column     Non-Null Count  Dtype 
+---  ------     --------------  ----- 
+ 0   title      57036 non-null  object
+ 1   subtitles  51744 non-null  object
+ 2   time       57036 non-null  object
+'''
 
 # Function to extract 'name' from 'subtitles'
 def extract_name(subtitles):
@@ -13,10 +39,52 @@ def extract_name(subtitles):
     return None  # Return None if subtitles is None or not a list
 
 # Apply the function to the 'subtitles' column
-df['subtitle_name'] = df['subtitles'].apply(extract_name)
+df['channel'] = df['subtitles'].apply(extract_name)
 
 # Drop the original 'subtitles' column (optional)
 df = df.drop(columns=['subtitles'])
 
 # Print the DataFrame to verify
-print(df.head())
+#print(df.head())
+'''
+                                            title                      time        channel
+0                          Watched AI Software - SNL  2025-01-26T18:50:05.777Z  Saturday Night Live
+1  Watched Create REST APIs from Kafka streams in...  2025-01-26T18:49:27.739Z             Tinybird
+2  Watched Learn Kafka in 10 Minutes | Most Impor...  2025-01-26T18:47:44.646Z       Darshil Parmar
+3  Watched Donkey Kong Country Returns HD - Avail...  2025-01-26T18:47:37.869Z                 None
+4  Watched 1 Atheist vs 25 Christians (feat. Alex...  2025-01-26T17:57:33.783Z              Jubilee
+'''
+
+# Convert the 'time' column to datetime with 'ISO8601' format
+df['time'] = pd.to_datetime(df['time'], errors='coerce', utc=True)
+
+# Create new columns and drop the time coloumn
+df['date'] = df['time'].dt.date  # Extract the date part
+df['hour'] = df['time'].dt.hour  # Extract the hour part
+df['day_of_week'] = df['time'].dt.day_name()  # Extract the day of the week
+df = df.drop(columns=['time'])
+
+# Check the DataFrame
+# print(df.head(3))
+
+'''
+                                               title              channel        date  hour day_of_week
+0                          Watched AI Software - SNL  Saturday Night Live  2025-01-26  18.0      Sunday
+1  Watched Create REST APIs from Kafka streams in...             Tinybird  2025-01-26  18.0      Sunday
+2  Watched Learn Kafka in 10 Minutes | Most Impor...       Darshil Parmar  2025-01-26  18.0      Sunday
+'''
+
+# Remove the first word "Watched" in the title.
+df['title'] = df['title'].apply(lambda x: x.split(' ', 1)[1] if len(x.split(' ', 1)) > 1 else x)
+
+# Define a function to remove emojis
+def remove_emojis(text):
+    # This pattern will match emojis and special characters (including symbols and non-alphanumeric characters)
+    emoji_pattern = re.compile("[\U00010000-\U0010ffff]", flags=re.UNICODE)
+    return emoji_pattern.sub(r'', text)
+
+# Apply the function to the 'title' column
+df['title'] = df['title'].apply(remove_emojis)
+
+# print(df.head(3))
+df.to_csv('updateddata.csv')
