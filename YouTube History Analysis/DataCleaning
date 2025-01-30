@@ -62,6 +62,12 @@ df['time'] = pd.to_datetime(df['time'], errors='coerce', utc=True)
 df['date'] = df['time'].dt.date  # Extract the date part
 df['hour'] = df['time'].dt.hour  # Extract the hour part
 df['day_of_week'] = df['time'].dt.day_name()  # Extract the day of the week
+
+df['hour'] = df['hour'].fillna(0)  # Replace NaNs with 0
+df['hour'] = df['hour'].replace([float('inf'), float('-inf')], 0)  # Replace Inf with 0 (optional)
+
+df['hour'] = df['hour'].astype(int)  # Convert after dropping invalid entries
+
 df = df.drop(columns=['time'])
 
 # Check the DataFrame
@@ -85,6 +91,11 @@ def remove_emojis(text):
 
 # Apply the function to the 'title' column
 df['title'] = df['title'].apply(remove_emojis)
+
+
+# Remove videos that where removed if they have http in the title
+df = df[~df['title'].str.contains('https')]
+
 
 # print(df.head(3))
 df.to_csv('updateddata.csv')

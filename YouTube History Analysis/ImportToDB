@@ -1,0 +1,74 @@
+import csv
+import psycopg2
+import os
+
+# Database connection
+conn = psycopg2.connect(
+    host="localhost",
+    port=5432,
+    dbname="postgres",
+    user="postgres",
+    password="password"
+)
+print("Connected to Database")
+
+cur = conn.cursor()
+
+# Define table structure (Modify column names and types as needed)
+table_name = "youtube_history"
+
+cur.execute(f"""
+    DROP TABLE IF EXISTS {table_name};
+""")
+
+cur.execute(f"""
+    CREATE TABLE IF NOT EXISTS {table_name} (
+        id SERIAL PRIMARY KEY,
+        video_title TEXT,
+        channel_name TEXT,
+        watch_date Date,
+        watch_hour INT,
+        watch_day TEXT
+    );
+""")
+conn.commit()
+print(f"Table '{table_name}' is ready.")
+
+# Path to CSV file
+csvPath = "/Users/joblethomas/Desktop/Portfolio/YouTube History Analysis/updateddata.csv"
+
+with open(csvPath, mode='r', encoding='utf-8') as file:
+    reader = csv.reader(file)
+    header = next(reader)  # Skip first header row
+    
+    # Ensure we're processing rows with at least 6 elements (including the empty first column)
+    for row in reader:
+        # Skip rows with too few columns (less than 6)
+        if len(row) < 6:
+            print(f"Skipping row (too few columns): {row}")  # Debugging output
+            continue
+        
+        video_title = row[1]  # Skip first empty column
+        channel_name = row[2]
+        watch_date = row[3]  # Expected format: YYYY-MM-DD
+        watch_hour = row[4]  # This should be an int
+        watch_day = row[5]   # Day of the week (e.g., "Saturday")
+
+        # Insert into the database
+        try:
+            cur.execute(f"""
+                INSERT INTO {table_name} (video_title, channel_name, watch_date, watch_hour, watch_day)
+                VALUES (%s, %s, %s, %s, %s);
+            """, (video_title, channel_name, watch_date, watch_hour, watch_day))
+        except Exception as e:
+            print(f"Error inserting row {row}: {e}")
+
+conn.commit()
+print("Data inserted successfully.")
+
+# Close connection
+cur.close()
+conn.close()
+print("Database connection closed.")
+
+
