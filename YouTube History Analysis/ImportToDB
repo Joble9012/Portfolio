@@ -1,6 +1,5 @@
 import csv
 import psycopg2
-import os
 
 # Database connection
 conn = psycopg2.connect(
@@ -14,21 +13,19 @@ print("Connected to Database")
 
 cur = conn.cursor()
 
-# Define table structure (Modify column names and types as needed)
+# Define table structure
 table_name = "youtube_history"
 
-cur.execute(f"""
-    DROP TABLE IF EXISTS {table_name};
-""")
+cur.execute(f"DROP TABLE IF EXISTS {table_name};")
 
 cur.execute(f"""
     CREATE TABLE IF NOT EXISTS {table_name} (
         id SERIAL PRIMARY KEY,
         video_title TEXT,
-        channel_name TEXT,
-        watch_date Date,
-        watch_hour INT,
-        watch_day TEXT
+        channel_name TEXT NULL,
+        watch_date DATE NULL,
+        watch_hour INTEGER NULL,
+        watch_day TEXT NULL
     );
 """)
 conn.commit()
@@ -39,29 +36,35 @@ csvPath = "/Users/joblethomas/Desktop/Portfolio/YouTube History Analysis/updated
 
 with open(csvPath, mode='r', encoding='utf-8') as file:
     reader = csv.reader(file)
-    header = next(reader)  # Skip first header row
-    
-    # Ensure we're processing rows with at least 6 elements (including the empty first column)
+    next(reader)  # Skip header row
+
     for row in reader:
-        # Skip rows with too few columns (less than 6)
-        if len(row) < 6:
-            print(f"Skipping row (too few columns): {row}")  # Debugging output
+        if len(row) != 6:  # Ensure we have exactly 6 elements
+            print("Skipping invalid row:", row)
+            continue
+
+        video_title = row[1].strip()
+        channel_name = row[2].strip() if row[2] else None  # Convert empty strings to NULL
+        watch_date = row[3].strip() if row[3] else None  # Convert empty strings to NULL
+        watch_hour = None
+        
+        try:
+            watch_hour = int(row[4]) if row[4].strip() else None
+        except ValueError:
+            print(f"Skipping row due to invalid watch_hour: {row}")
             continue
         
-        video_title = row[1]  # Skip first empty column
-        channel_name = row[2]
-        watch_date = row[3]  # Expected format: YYYY-MM-DD
-        watch_hour = row[4]  # This should be an int
-        watch_day = row[5]   # Day of the week (e.g., "Saturday")
+        watch_day = row[5].strip() if row[5] else None
 
-        # Insert into the database
-        try:
-            cur.execute(f"""
-                INSERT INTO {table_name} (video_title, channel_name, watch_date, watch_hour, watch_day)
-                VALUES (%s, %s, %s, %s, %s);
-            """, (video_title, channel_name, watch_date, watch_hour, watch_day))
-        except Exception as e:
-            print(f"Error inserting row {row}: {e}")
+        # Ensure the required fields are present
+        if not video_title or not watch_date:
+            print(f"Skipping row due to missing essential data: {row}")
+            continue
+
+        cur.execute("""
+            INSERT INTO youtube_history (video_title, channel_name, watch_date, watch_hour, watch_day)
+            VALUES (%s, %s, %s, %s, %s);
+        """, (video_title, channel_name, watch_date, watch_hour, watch_day))
 
 conn.commit()
 print("Data inserted successfully.")
@@ -70,5 +73,3 @@ print("Data inserted successfully.")
 cur.close()
 conn.close()
 print("Database connection closed.")
-
-
