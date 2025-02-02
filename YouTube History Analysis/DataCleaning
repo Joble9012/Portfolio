@@ -1,11 +1,11 @@
 import pandas as pd
 import re
 
-# Load the dataset
+# Loading the dataset
 df = pd.read_json('RawWatchHistory.json')
 
-# What are the coloumns working with
-# print(df.info())
+# Get info aboout the coloumns
+print(df.info())
 '''
  #   Column            Non-Null Count  Dtype 
 ---  ------            --------------  ----- 
@@ -20,7 +20,7 @@ df = pd.read_json('RawWatchHistory.json')
  8   description       1 non-null      object 
 '''
 
-# Drop unnecessary columns except for 'subtitles'
+# Drop unnecessary columns
 df = df.drop(["header", "titleUrl", "products", "activityControls", "details", "description"], axis="columns")
 
 #print(newdf.info())
@@ -32,20 +32,18 @@ df = df.drop(["header", "titleUrl", "products", "activityControls", "details", "
  2   time       57036 non-null  object
 '''
 
-# Function to extract 'name' from 'subtitles'
+# Function to extract the channel name from nested column subtitles, add it to the df, and remove 'subtitles' column
 def extract_name(subtitles):
-    if isinstance(subtitles, list) and len(subtitles) > 0:  # Check if it's a non-empty list
-        return subtitles[0].get('name', None)  # Get 'name' from the first dictionary
-    return None  # Return None if subtitles is None or not a list
+    if isinstance(subtitles, list) and len(subtitles) > 0:
+        return subtitles[0].get('name', None)  
+    return None
 
-# Apply the function to the 'subtitles' column
 df['channel'] = df['subtitles'].apply(extract_name)
 
-# Drop the original 'subtitles' column (optional)
 df = df.drop(columns=['subtitles'])
 
-# Print the DataFrame to verify
-#print(df.head())
+# Print the df to verify changes
+print(df.head())
 '''
                                             title                      time        channel
 0                          Watched AI Software - SNL  2025-01-26T18:50:05.777Z  Saturday Night Live
@@ -55,13 +53,13 @@ df = df.drop(columns=['subtitles'])
 4  Watched 1 Atheist vs 25 Christians (feat. Alex...  2025-01-26T17:57:33.783Z              Jubilee
 '''
 
-# Convert the 'time' column to datetime with 'ISO8601' format
+# Convert the 'time' column to datetime with ISO8601 format
 df['time'] = pd.to_datetime(df['time'], errors='coerce', utc=True)
 
-# Create new columns and drop the time coloumn
-df['date'] = df['time'].dt.date  # Extract the date part
-df['hour'] = df['time'].dt.hour  # Extract the hour part
-df['day_of_week'] = df['time'].dt.day_name()  # Extract the day of the week
+# Create new time columns and drop the time coloumn
+df['date'] = df['time'].dt.date
+df['hour'] = df['time'].dt.hour
+df['day_of_week'] = df['time'].dt.day_name()
 
 df['hour'] = df['hour'].fillna(0)  # Replace NaNs with 0
 df['hour'] = df['hour'].replace([float('inf'), float('-inf')], 0)  # Replace Inf with 0 (optional)
@@ -70,9 +68,8 @@ df['hour'] = df['hour'].astype(int)  # Convert after dropping invalid entries
 
 df = df.drop(columns=['time'])
 
-# Check the DataFrame
-# print(df.head(3))
-
+# Print the df to verify changes
+print(df.head(3))
 '''
                                                title              channel        date  hour day_of_week
 0                          Watched AI Software - SNL  Saturday Night Live  2025-01-26  18.0      Sunday
@@ -83,19 +80,18 @@ df = df.drop(columns=['time'])
 # Remove the first word "Watched" in the title.
 df['title'] = df['title'].apply(lambda x: x.split(' ', 1)[1] if len(x.split(' ', 1)) > 1 else x)
 
-# Define a function to remove emojis
+# Remove emojis in the title
 def remove_emojis(text):
-    # This pattern will match emojis and special characters (including symbols and non-alphanumeric characters)
     emoji_pattern = re.compile("[\U00010000-\U0010ffff]", flags=re.UNICODE)
     return emoji_pattern.sub(r'', text)
 
-# Apply the function to the 'title' column
 df['title'] = df['title'].apply(remove_emojis)
 
-
-# Remove videos that where removed if they have http in the title
+# Remove videos that have 'http' in the title
 df = df[~df['title'].str.contains('https')]
 
+# Remove videos that have 'http' in the title
+df = df[~df['title'].str.contains('Ads On YouTube')]
 
-# print(df.head(3))
+# Save cleaned data to a csv file
 df.to_csv('updateddata.csv')
