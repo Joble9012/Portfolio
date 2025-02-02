@@ -93,5 +93,12 @@ df = df[~df['title'].str.contains('https')]
 # Remove videos that have 'http' in the title
 df = df[~df['title'].str.contains('Ads On YouTube')]
 
+# Remove videos that happen in 2025 and null dates
+# Ensure 'date' column is datetime, converting errors to NaT (null dates)
+df['date'] = pd.to_datetime(df['date'], errors='coerce')
+
+# Filter out rows where the year is 2025 or the value is NaT (null)
+df = df[~((df['date'].dt.year == 2025) | (df['date'].isna()))]
+
 # Save cleaned data to a csv file
-df.to_csv('updateddata.csv')
+df.to_csv('CleanData.csv')

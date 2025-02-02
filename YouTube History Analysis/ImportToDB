@@ -32,7 +32,7 @@ conn.commit()
 print(f"Table '{table_name}' is ready.")
 
 # Path to CSV file
-csvPath = "/Users/joblethomas/Desktop/Portfolio/YouTube History Analysis/updateddata.csv"
+csvPath = "/Users/joblethomas/Desktop/Portfolio/YouTube History Analysis/CleanData.csv"
 
 with open(csvPath, mode='r', encoding='utf-8') as file:
     reader = csv.reader(file)
