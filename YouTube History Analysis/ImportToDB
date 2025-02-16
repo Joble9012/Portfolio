@@ -1,0 +1,75 @@
+import csv
+import psycopg2
+
+# Database connection
+conn = psycopg2.connect(
+    host="localhost",
+    port=5432,
+    dbname="postgres",
+    user="postgres",
+    password="password"
+)
+print("Connected to Database")
+
+cur = conn.cursor()
+
+# Define table structure
+table_name = "youtube_history"
+
+cur.execute(f"DROP TABLE IF EXISTS {table_name};")
+
+cur.execute(f"""
+    CREATE TABLE IF NOT EXISTS {table_name} (
+        id SERIAL PRIMARY KEY,
+        video_title TEXT,
+        channel_name TEXT NULL,
+        watch_date DATE NULL,
+        watch_hour INTEGER NULL,
+        watch_day TEXT NULL
+    );
+""")
+conn.commit()
+print(f"Table '{table_name}' is ready.")
+
+# Path to CSV file
+csvPath = "/Users/joblethomas/Desktop/Portfolio/YouTube History Analysis/CleanData.csv"
+
+with open(csvPath, mode='r', encoding='utf-8') as file:
+    reader = csv.reader(file)
+    next(reader)  # Skip header row
+
+    for row in reader:
+        if len(row) != 6:  # Ensure we have exactly 6 elements
+            print("Skipping invalid row:", row)
+            continue
+
+        video_title = row[1].strip()
+        channel_name = row[2].strip() if row[2] else None  # Convert empty strings to NULL
+        watch_date = row[3].strip() if row[3] else None  # Convert empty strings to NULL
+        watch_hour = None
+        
+        try:
+            watch_hour = int(row[4]) if row[4].strip() else None
+        except ValueError:
+            print(f"Skipping row due to invalid watch_hour: {row}")
+            continue
+        
+        watch_day = row[5].strip() if row[5] else None
+
+        # Ensure the required fields are present
+        if not video_title or not watch_date:
+            print(f"Skipping row due to missing essential data: {row}")
+            continue
+
+        cur.execute("""
+            INSERT INTO youtube_history (video_title, channel_name, watch_date, watch_hour, watch_day)
+            VALUES (%s, %s, %s, %s, %s);
+        """, (video_title, channel_name, watch_date, watch_hour, watch_day))
+
+conn.commit()
+print("Data inserted successfully.")
+
+# Close connection
+cur.close()
+conn.close()
+print("Database connection closed.")

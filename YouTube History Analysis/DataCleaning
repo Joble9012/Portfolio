@@ -1,0 +1,104 @@
+import pandas as pd
+import re
+
+# Loading the dataset
+df = pd.read_json('RawWatchHistory.json')
+
+# Get info aboout the coloumns
+print(df.info())
+'''
+ #   Column            Non-Null Count  Dtype 
+---  ------            --------------  ----- 
+ 0   header            57036 non-null  object
+ 1   title             57036 non-null  object
+ 2   titleUrl          56833 non-null  object
+ 3   subtitles         51744 non-null  object
+ 4   time              57036 non-null  object
+ 5   products          57036 non-null  object
+ 6   activityControls  57036 non-null  object
+ 7   details           1181 non-null   object
+ 8   description       1 non-null      object 
+'''
+
+# Drop unnecessary columns
+df = df.drop(["header", "titleUrl", "products", "activityControls", "details", "description"], axis="columns")
+
+#print(newdf.info())
+'''
+#   Column     Non-Null Count  Dtype 
+---  ------     --------------  ----- 
+ 0   title      57036 non-null  object
+ 1   subtitles  51744 non-null  object
+ 2   time       57036 non-null  object
+'''
+
+# Function to extract the channel name from nested column subtitles, add it to the df, and remove 'subtitles' column
+def extract_name(subtitles):
+    if isinstance(subtitles, list) and len(subtitles) > 0:
+        return subtitles[0].get('name', None)  
+    return None
+
+df['channel'] = df['subtitles'].apply(extract_name)
+
+df = df.drop(columns=['subtitles'])
+
+# Print the df to verify changes
+print(df.head())
+'''
+                                            title                      time        channel
+0                          Watched AI Software - SNL  2025-01-26T18:50:05.777Z  Saturday Night Live
+1  Watched Create REST APIs from Kafka streams in...  2025-01-26T18:49:27.739Z             Tinybird
+2  Watched Learn Kafka in 10 Minutes | Most Impor...  2025-01-26T18:47:44.646Z       Darshil Parmar
+3  Watched Donkey Kong Country Returns HD - Avail...  2025-01-26T18:47:37.869Z                 None
+4  Watched 1 Atheist vs 25 Christians (feat. Alex...  2025-01-26T17:57:33.783Z              Jubilee
+'''
+
+# Convert the 'time' column to datetime with ISO8601 format
+df['time'] = pd.to_datetime(df['time'], errors='coerce', utc=True)
+
+# Create new time columns and drop the time coloumn
+df['date'] = df['time'].dt.date
+df['hour'] = df['time'].dt.hour
+df['day_of_week'] = df['time'].dt.day_name()
+
+df['hour'] = df['hour'].fillna(0)
+df['hour'] = df['hour'].replace([float('inf'), float('-inf')], 0)
+
+df['hour'] = df['hour'].astype(int)
+
+df = df.drop(columns=['time'])
+
+# Print the df to verify changes
+print(df.head(3))
+'''
+                                               title              channel        date  hour day_of_week
+0                          Watched AI Software - SNL  Saturday Night Live  2025-01-26  18.0      Sunday
+1  Watched Create REST APIs from Kafka streams in...             Tinybird  2025-01-26  18.0      Sunday
+2  Watched Learn Kafka in 10 Minutes | Most Impor...       Darshil Parmar  2025-01-26  18.0      Sunday
+'''
+
+# Remove the first word "Watched" in the title.
+df['title'] = df['title'].apply(lambda x: x.split(' ', 1)[1] if len(x.split(' ', 1)) > 1 else x)
+
+# Remove emojis in the title
+def remove_emojis(text):
+    emoji_pattern = re.compile("[\U00010000-\U0010ffff]", flags=re.UNICODE)
+    return emoji_pattern.sub(r'', text)
+
+df['title'] = df['title'].apply(remove_emojis)
+
+# Remove videos that have 'http' in the title
+df = df[~df['title'].str.contains('https')]
+
+# Remove videos that have 'http' in the title
+df = df[~df['title'].str.contains('Ads On YouTube')]
+
+# Remove videos that happen in 2025 and null dates
+# Ensure 'date' column is datetime, converting errors to NaT (null dates)
+df['date'] = pd.to_datetime(df['date'], errors='coerce')
+
+# Filter out rows where the year is 2025 or the value is NaT (null)
+df = df[~((df['date'].dt.year == 2025) | (df['date'].isna()))]
+
+# Save cleaned data to a csv file
+df.to_csv('CleanData.csv')
