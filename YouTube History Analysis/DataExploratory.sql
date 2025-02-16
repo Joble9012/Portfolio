@@ -40,8 +40,7 @@ FROM (SELECT watch_day, channel_name, COUNT(*) AS video_count,
         RANK() OVER (PARTITION BY watch_day ORDER BY COUNT(*) DESC) AS rnk  
     FROM youtube_history  
     GROUP BY watch_day, channel_name) ranked  
-WHERE rnk = 1
-    AND channel_name != 'ESPN';
+WHERE rnk = 1;
 
 -- Average number of videos watched per channel
 SELECT ROUND(AVG(video_count),2) AS avg_videos_per_channel 
